@@ -701,7 +701,6 @@ AC_ARG_ENABLE(kafka,
 			ERROR: missing Kafka library. Refer to: https://github.com/edenhill/librdkafka/
 		])])
 	fi
-
 	AC_MSG_CHECKING([default locations for rdkafka.h])
 	if test -r /usr/include/librdkafka/rdkafka.h; then
 		KAFKA_CFLAGS="-I/usr/include"
@@ -727,6 +726,56 @@ AC_ARG_ENABLE(kafka,
   ]
 )
 dnl finish: Kafka handling
+
+dnl start: Avro handling
+AC_MSG_CHECKING(whether to enable Avro support)
+AC_ARG_ENABLE(avro,
+  [  --enable-avro                   Enable Avro support (default: no)],
+  [ case "$enableval" in
+  yes)
+    AC_MSG_RESULT(yes)
+    PKG_CHECK_MODULES([AVRO], [avro >= 1.8.1],, [
+ AC_MSG_CHECKING([default locations for avro])
+ if test -r /lib/libavro.a -o -r /lib/libavro.so; then
+  AVRO_LIBS="-L/lib -lavro"
+  AC_MSG_RESULT([found in /usr/lib])
+ elif test -r /usr/lib64/libavro.a -o -r /usr/lib64/libavro.so; then
+  AVRO_LIBS="-L/usr/lib64 -lavro"
+  AC_MSG_RESULT([found in /usr/lib64])
+ elif test -r /usr/local/lib/libavro.a -o -r /usr/local/lib/libavro.so; then
+  AVRO_LIBS="-L/usr/local/lib -lavro"
+  AC_MSG_RESULT([found in /usr/local/lib])
+ else
+  AC_MSG_RESULT([not found])
+  AC_CHECK_LIB([avro], [avro_new], [], [AC_MSG_ERROR([
+   ERROR: missing Avro library. Refer to: http://avro.apache.org/docs/1.8.1/api/c/index.html
+  ])])
+ fi
+ AC_MSG_CHECKING([default locations for avro.h])
+ if test -r /usr/local/include/avro.h; then
+  AVRO_CFLAGS="-I/usr/local/include"
+  AC_MSG_RESULT([found in /usr/local/include])
+ elif test -r /include/avro.h; then
+  AVRO_CFLAGS="-I/include"
+  AC_MSG_RESULT([found in /include])
+ else
+  AC_MSG_RESULT([not found])
+  AC_CHECK_HEADER([avro.h], [], [AC_MSG_ERROR(ERROR: missing Avro headers)])
+ fi
+    ])
+    PLUGINS="${PLUGINS} avro"
+    USING_AVRO="yes"
+    AC_DEFINE(WITH_AVRO, 1)
+    ;;
+  no)
+    AC_MSG_RESULT(no)
+    ;;
+  esac ],
+  [
+    AC_MSG_RESULT(no)
+  ]
+)
+dnl finish: Avro handling
 
 dnl start: geoip handling
 AC_MSG_CHECKING(whether to enable GeoIP support)

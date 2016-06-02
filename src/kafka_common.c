@@ -25,6 +25,9 @@
 #include "pmacct.h"
 #include "pmacct-data.h"
 #include "kafka_common.h"
+#include "avro.h"
+
+#define MAX_SCHEMA_LEN ((off_t) 1024*1024)
 
 /* Functions */
 void p_kafka_init_host(struct p_kafka_host *kafka_host)
@@ -199,15 +202,41 @@ int p_kafka_connect_to_consume(struct p_kafka_host *kafka_host)
   return SUCCESS;
 }
 
+avro_schema_t test_schema;
+/* A simple schema for our tutorial */
+const char  TEST_SCHEMA[] =
+"{\"type\":\"record\",\
+  \"name\":\"Test\",\
+  \"fields\":[\
+     {\"name\": \"datatest\", \"type\": \"bytes\"}]}";
+
+/* Parse schema into a schema data structure */
+void init_schema(void)
+{
+  if (avro_schema_from_json_literal(TEST_SCHEMA, &test_schema)) {
+    fprintf(stderr, "Unable to parse test schema\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
 int p_kafka_produce_data(struct p_kafka_host *kafka_host, void *data, u_int32_t data_len)
 {
+  //**AVRO PROTOTYPE**/
+  char *codec = NULL;
+  strcmp(codec, "snappy");
+  /*********************/
+
   int ret = SUCCESS;
 
   kafkap_ret_err_cb = FALSE;
 
   if (kafka_host && kafka_host->rk && kafka_host->topic) {
+    init_schema();
+    avro_datum_t datatest_datum = avro_bytes(data,data_len);
+    avro_datum_t test_record = avro_record(test_schema);
+    avro_record_set(test_record, "datatest", datatest_datum);
     ret = rd_kafka_produce(kafka_host->topic, kafka_host->partition, RD_KAFKA_MSG_F_COPY,
-			   data, data_len, NULL, 0, NULL);
+			   test_record, sizeof(test_record), NULL, 0, NULL);
 
     if (ret == ERR) {
       Log(LOG_ERR, "ERROR ( %s/%s ): Failed to produce to topic %s partition %i: %s\n", config.name, config.type,
