@@ -235,9 +235,13 @@ int p_kafka_produce_data(struct p_kafka_host *kafka_host, void *data, u_int32_t 
     avro_datum_t datatest_datum = avro_bytes(data,data_len);
     avro_datum_t test_record = avro_record(test_schema);
     avro_record_set(test_record, "datatest", datatest_datum);
+    char buf[4096];
+    avro_writer_t writer = avro_writer_memory(buf, sizeof(buf));
+    avro_write_data(writer,test_schema,test_record);
     ret = rd_kafka_produce(kafka_host->topic, kafka_host->partition, RD_KAFKA_MSG_F_COPY,
-			   test_record, sizeof(test_record), NULL, 0, NULL);
-
+         buf, sizeof(buf), NULL, 0, NULL);
+    /*ret = rd_kafka_produce(kafka_host->topic, kafka_host->partition, RD_KAFKA_MSG_F_COPY,
+         data, data_len, NULL, 0, NULL);*/
     if (ret == ERR) {
       Log(LOG_ERR, "ERROR ( %s/%s ): Failed to produce to topic %s partition %i: %s\n", config.name, config.type,
           rd_kafka_topic_name(kafka_host->topic), kafka_host->partition, rd_kafka_err2str(rd_kafka_errno2err(errno)));
